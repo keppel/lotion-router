@@ -1,8 +1,10 @@
-// TODO: route beginblock, endblock, etc
+'use strict'
+
+// TODO: change standard lotion module format to object (not array)
 
 function Router (routes) {
   if (routes == null || typeof routes !== 'object') {
-    throw Error('Must provide route routes')
+    throw Error('Must provide routes object')
   }
 
   let blockHandlers = getAllHandlers(routes, 'block')
@@ -18,16 +20,22 @@ function Router (routes) {
     }
 
     let handlers = getRouteHandlers(routes, tx.type, 'tx')
-
-    let substate = state[tx.type]
-    if (substate == null) {
-      throw Error(`Substate "${tx.type}" does not exist`)
-    }
-
+    let substate = getSubstate(state, tx.type)
     let ctx = {
+      // gets other module registered on this router
+      // TODO: this should be accessible in other routes?
+      //       do we need to pass in tx,chain?
       get (routeName) {
         let route = getRoute(routes, routeName)
-      }
+        if (route.exports == null) {
+          throw Error(`Route "${routeName}" has no exports`)
+        }
+        let substate = getSubstate(state, routeName)
+        return route.exports(substate, tx, chain, ctx)
+      },
+
+      // root state
+      state
     }
 
     for (let handler in handlers) {
@@ -37,12 +45,19 @@ function Router (routes) {
 
   // lotion block handler
   function blockHandler (state, chain) {
-    blockHandlers.forEach(state, chain)
+    for (let { route, handler } of blockHandlers) {
+      let substate = getSubstate(state, route)
+      handler(substate, chain)
+    }
   }
 
   // lotion initialization handler
   function initializer (state, chain) {
-    initializers.forEach(state, chain)
+    // TODO: let modules specify 'initialState' property
+    for (let { route, handler } of initializers) {
+      let substate = state[route] = {}
+      handler(substate, chain)
+    }
   }
 
   // returns a lotion middleware stack
@@ -55,16 +70,20 @@ function Router (routes) {
 
 function getAllHandlers (routes, type) {
   let handlers = []
-  for (let route of routes) {
+  for (let routeName in routes) {
+    let route = routes[routeName]
+
     // special case: single function is tx handler
-    if (typeof routes === 'function') {
+    if (typeof route === 'function') {
       route = [ { type: 'tx', middleware: route } ]
     }
 
     for (let handler of route) {
-      if (handler.type === type) {
-        handlers[type].push(handler.middleware)
-      }
+      if (handler.type !== type) continue
+      handlers.push({
+        route: routeName,
+        handler: handler.middleware
+      })
     }
   }
   return handlers
@@ -98,6 +117,14 @@ function getRouteHandlers (routes, routeName, type = 'tx') {
     throwNoHandlerError()
   }
   return handlers
+}
+
+function getSubstate (state, key) {
+  let substate = state[key]
+  if (substate == null) {
+    throw Error(`Substate "${key}" does not exist`)
+  }
+  return substate
 }
 
 module.exports = Router
