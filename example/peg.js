@@ -24,7 +24,10 @@ let betacoin = coins({
 })
 
 // route transactions to either alphacoin or betacoin
-app.use(router({ alphacoin, betacoin }))
+app.use(router({
+  alphacoin,
+  betacoin
+}))
 
 // start node
 app.listen(8888)

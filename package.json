@@ -1,5 +1,5 @@
 {
-  "name": "lotion-tree",
+  "name": "lotion-router",
   "version": "0.0.0",
   "description": "Lotion handler tree",
   "main": "index.js",
