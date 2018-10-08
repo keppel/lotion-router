@@ -4,7 +4,7 @@
   "description": "Lotion handler tree",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "standard && nyc -r text -r html ava"
   },
   "keywords": [
     "lotion",
@@ -14,7 +14,10 @@
   "author": "Matt Bell <mappum@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "lotion": "^0.2.2"
+    "ava": "^0.25.0",
+    "lotion": "^0.2.2",
+    "nyc": "^13.0.1",
+    "standard": "^12.0.1"
   },
   "dependencies": {
     "old": "^0.2.0"
