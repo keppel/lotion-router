@@ -15,5 +15,8 @@
   "license": "MIT",
   "devDependencies": {
     "lotion": "^0.2.2"
+  },
+  "dependencies": {
+    "old": "^0.2.0"
   }
 }

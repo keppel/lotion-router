@@ -1,5 +1,7 @@
 'use strict'
 
+const old = require('old')
+
 // TODO: change standard lotion module format to object (not array)
 
 function Router (routes) {
@@ -127,4 +129,4 @@ function getSubstate (state, key) {
   return substate
 }
 
-module.exports = Router
+module.exports = old(Router)
