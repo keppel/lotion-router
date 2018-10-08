@@ -40,7 +40,7 @@ function Router (routes) {
       state
     }
 
-    for (let handler in handlers) {
+    for (let handler of handlers) {
       handler(substate, tx, chain, ctx)
     }
   }
@@ -55,9 +55,16 @@ function Router (routes) {
 
   // lotion initialization handler
   function initializer (state, chain) {
-    // TODO: let modules specify 'initialState' property
+    for (let route in routes) {
+      let substate = {}
+      if (routes[route].initialState != null) {
+        substate = routes[route].initialState
+      }
+      state[route] = substate
+    }
+
     for (let { route, handler } of initializers) {
-      let substate = state[route] = {}
+      let substate = state[route]
       handler(substate, chain)
     }
   }
