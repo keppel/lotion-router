@@ -12,5 +12,8 @@
     "blockchain"
   ],
   "author": "Matt Bell <mappum@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "lotion": "^0.2.2"
+  }
 }
