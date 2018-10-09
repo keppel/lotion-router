@@ -23,21 +23,40 @@ function Router (routes) {
 
     let handlers = getRouteHandlers(routes, tx.type, 'tx')
     let substate = getSubstate(state, tx.type)
-    let ctx = {
-      // gets other module registered on this router
-      // TODO: this should be accessible in other routes?
-      //       do we need to pass in tx,chain?
-      get (routeName) {
-        let route = getRoute(routes, routeName)
-        if (route.exports == null) {
-          throw Error(`Route "${routeName}" has no exports`)
-        }
-        let substate = getSubstate(state, routeName)
-        return route.exports(substate, tx, chain, ctx)
-      },
 
-      // root state
-      state
+    // get exported methods from other routes
+    let exportedMethods = {}
+    for (let [ routeName, route ] of Object.entries(routes)) {
+      if (routeName === tx.type) continue
+      if (route.methods == null) continue
+      // define getter, so we bind the methods as they are accessed
+      Object.defineProperty(exportedMethods, routeName, {
+        get () {
+          let substate = getSubstate(state, routeName)
+          // TODO: use a more complete way of making object read-only
+          return new Proxy(route.methods, {
+            get (obj, key) {
+              if (typeof obj[key] !== 'function') {
+                throw Error('Got non-function in methods')
+              }
+              // use the external route's own substate as first arg
+              return obj[key].bind(null, substate)
+            },
+            set () {
+              throw Error('Route methods are read-only')
+            }
+          })
+        }
+      })
+    }
+
+    // TODO: combine ctx with chainInfo
+    let ctx = {
+      // root state, just in case
+      rootState: state,
+
+      // exported methods from other routes
+      routes: exportedMethods
     }
 
     for (let handler of handlers) {
