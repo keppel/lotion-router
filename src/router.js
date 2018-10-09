@@ -140,7 +140,9 @@ function getRouteHandlers (routes, routeName, type = 'tx') {
   }
 
   // find handler of given type from route
-  let handlers = route.filter((h) => h.type === type)
+  let handlers = route
+    .filter((h) => h.type === type)
+    .map((h) => h.middleware)
   if (handlers.length === 0) {
     throwNoHandlerError()
   }
