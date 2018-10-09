@@ -145,3 +145,85 @@ test('errors on missing substate', (t) => {
     t.is(err.message, 'Substate "foo" does not exist')
   }
 })
+
+test('cross-route methods', (t) => {
+  // TODO: use module objs instead of arrays
+  // TODO: chain and ctx will be the same thing
+  let router = new Router({
+    foo (state, tx, chain, ctx) {
+      state.value = ctx.routes.bar.increment()
+    },
+    bar: Object.assign([], {
+      methods: {
+        increment (state) {
+          state.value += 1
+          return state.value
+        }
+      }
+    })
+  })
+
+  let txHandler = router
+    .find(({ type }) => type === 'tx')
+    .middleware
+
+  let state = { foo: {}, bar: { value: 5 } }
+  txHandler(state, { type: 'foo' }, {})
+  txHandler(state, { type: 'foo' }, {})
+  t.is(state.foo.value, 7)
+  t.is(state.bar.value, 7)
+})
+
+test('cross-route methods must be functions', (t) => {
+  // TODO: use module objs instead of arrays
+  // TODO: chain and ctx will be the same thing
+  let router = new Router({
+    foo (state, tx, chain, ctx) {
+      state.value = ctx.routes.bar.x
+    },
+    bar: Object.assign([], {
+      methods: {
+        x: 5
+      }
+    })
+  })
+
+  let txHandler = router
+    .find(({ type }) => type === 'tx')
+    .middleware
+
+  let state = { foo: {}, bar: {} }
+  try {
+    txHandler(state, { type: 'foo' }, {})
+    t.fail()
+  } catch (err) {
+    t.is(err.message, 'Got non-function in methods')
+  }
+})
+
+test('cross-route methods are read-only', (t) => {
+  // TODO: use module objs instead of arrays
+  // TODO: chain and ctx will be the same thing
+  let router = new Router({
+    foo (state, tx, chain, ctx) {
+      state.value = ctx.routes.bar.y = 5
+    },
+    bar: Object.assign([], {
+      methods: {
+        x () {}
+      }
+    })
+  })
+
+  let txHandler = router
+    .find(({ type }) => type === 'tx')
+    .middleware
+
+  let state = { foo: {}, bar: {} }
+  try {
+    txHandler(state, { type: 'foo' }, {})
+    t.fail()
+  } catch (err) {
+    t.is(err.message, 'Route methods are read-only')
+  }
+})
