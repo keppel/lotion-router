@@ -127,7 +127,7 @@ function getRoute (routes, routeName) {
 
 function getRouteHandlers (routes, routeName, type = 'tx') {
   function throwNoHandlerError () {
-    throw Error(`No ${type} handlers defined for route "${route}"`)
+    throw Error(`No ${type} handlers defined for route "${routeName}"`)
   }
 
   // find route
