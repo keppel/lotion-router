@@ -258,3 +258,28 @@ test('module with multiple middleware of type', (t) => {
   t.is(state.foo.x, 1)
   t.is(state.foo.y, 1)
 })
+
+test('tx for route with no tx handler', (t) => {
+  // TODO: use module objs instead of arrays
+  // TODO: chain and ctx will be the same thing
+  let router = new Router({
+    foo: [
+      {
+        type: 'block',
+        middleware (state) {}
+      }
+    ]
+  })
+
+  let txHandler = router
+    .find(({ type }) => type === 'tx')
+    .middleware
+
+  let state = { foo: {} }
+  try {
+    txHandler(state, { type: 'foo', count: 1 })
+    t.fail()
+  } catch (err) {
+    t.is(err.message, 'No tx handlers defined for route "foo"')
+  }
+})
