@@ -227,3 +227,34 @@ test('cross-route methods are read-only', (t) => {
     t.is(err.message, 'Route methods are read-only')
   }
 })
+
+test('module with multiple middleware of type', (t) => {
+  // TODO: use module objs instead of arrays
+  // TODO: chain and ctx will be the same thing
+  let router = new Router({
+    foo: [
+      {
+        type: 'tx',
+        middleware (state, tx) {
+          state.x = tx.count
+        }
+      },
+      {
+        type: 'tx',
+        middleware (state, tx) {
+          state.y = tx.count
+        }
+      }
+    ]
+  })
+
+  let txHandler = router
+    .find(({ type }) => type === 'tx')
+    .middleware
+
+  let state = { foo: {} }
+  txHandler(state, { type: 'foo', count: 1 })
+
+  t.is(state.foo.x, 1)
+  t.is(state.foo.y, 1)
+})
