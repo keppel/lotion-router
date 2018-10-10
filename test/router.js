@@ -301,7 +301,6 @@ test('initialState override', (t) => {
 })
 
 test('existing state not overriden', (t) => {
-  // TODO: use module objs instead of arrays
   let router = new Router({
     foo (state, tx, context) {}
   })
@@ -313,4 +312,20 @@ test('existing state not overriden', (t) => {
   let state = { foo: { bar: 'baz' } }
   initializer(state)
   t.is(state.foo.bar, 'baz')
+})
+
+test('context has rootState', (t) => {
+  // TODO: use module objs instead of arrays
+  let router = new Router({
+    foo (state, tx, ctx) {
+      t.is(ctx.rootState.x, 123)
+    }
+  })
+
+  let txHandler = router
+    .find(({ type }) => type === 'tx')
+    .middleware
+
+  let state = { x: 123, foo: {} }
+  txHandler(state, { type: 'foo' }, {})
 })
