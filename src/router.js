@@ -75,7 +75,7 @@ function Router (routes) {
   // lotion initialization handler
   function initializer (state, chain) {
     for (let route in routes) {
-      let substate
+      let substate //= state[route]
 
       if (routes[route].initialState != null) {
         if (route in state) {
