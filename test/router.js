@@ -283,3 +283,25 @@ test('tx for route with no tx handler', (t) => {
     t.is(err.message, 'No tx handlers defined for route "foo"')
   }
 })
+
+test('initialState override', (t) => {
+  // TODO: use module objs instead of arrays
+  // TODO: chain and ctx will be the same thing
+  let router = new Router({
+    foo: Object.assign([], {
+      initialState: { x: 'y' }
+    })
+  })
+
+  let initializer = router
+    .find(({ type }) => type === 'initializer')
+    .middleware
+
+  let state = { foo: {} }
+  try {
+    initializer(state)
+    t.fail()
+  } catch (err) {
+    t.is(err.message, 'Route "foo" has initialState, but state.foo already exists')
+  }
+})
