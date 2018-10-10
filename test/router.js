@@ -19,11 +19,11 @@ test('create router', (t) => {
 
 test('routes txs to correct handlers', (t) => {
   let router = new Router({
-    foo (state, tx, chain, ctx) {
+    foo (state, tx, ctx) {
       t.is(tx.type, 'foo')
       t.is(tx.value, 100)
     },
-    bar (state, tx, chain, ctx) {
+    bar (state, tx, ctx) {
       t.is(tx.type, 'bar')
       t.is(tx.value, 123)
     }
@@ -83,7 +83,7 @@ test('errors on bad tx type', (t) => {
 
 test('calls initializers', (t) => {
   let router = new Router({
-    foo (state, tx, chain, ctx) {},
+    foo (state, tx, ctx) {},
     bar: [
       {
         type: 'initializer',
@@ -148,10 +148,9 @@ test('errors on missing substate', (t) => {
 
 test('cross-route methods', (t) => {
   // TODO: use module objs instead of arrays
-  // TODO: chain and ctx will be the same thing
   let router = new Router({
-    foo (state, tx, chain, ctx) {
-      state.value = ctx.routes.bar.increment()
+    foo (state, tx, ctx) {
+      state.value = ctx.modules.bar.increment()
     },
     bar: Object.assign([], {
       methods: {
@@ -176,10 +175,9 @@ test('cross-route methods', (t) => {
 
 test('cross-route methods must be functions', (t) => {
   // TODO: use module objs instead of arrays
-  // TODO: chain and ctx will be the same thing
   let router = new Router({
-    foo (state, tx, chain, ctx) {
-      state.value = ctx.routes.bar.x
+    foo (state, tx, ctx) {
+      state.value = ctx.modules.bar.x
     },
     bar: Object.assign([], {
       methods: {
@@ -203,10 +201,9 @@ test('cross-route methods must be functions', (t) => {
 
 test('cross-route methods are read-only', (t) => {
   // TODO: use module objs instead of arrays
-  // TODO: chain and ctx will be the same thing
   let router = new Router({
-    foo (state, tx, chain, ctx) {
-      state.value = ctx.routes.bar.y = 5
+    foo (state, tx, ctx) {
+      state.value = ctx.modules.bar.y = 5
     },
     bar: Object.assign([], {
       methods: {
@@ -230,7 +227,6 @@ test('cross-route methods are read-only', (t) => {
 
 test('module with multiple middleware of type', (t) => {
   // TODO: use module objs instead of arrays
-  // TODO: chain and ctx will be the same thing
   let router = new Router({
     foo: [
       {
@@ -253,7 +249,7 @@ test('module with multiple middleware of type', (t) => {
     .middleware
 
   let state = { foo: {} }
-  txHandler(state, { type: 'foo', count: 1 })
+  txHandler(state, { type: 'foo', count: 1 }, {})
 
   t.is(state.foo.x, 1)
   t.is(state.foo.y, 1)
@@ -261,7 +257,6 @@ test('module with multiple middleware of type', (t) => {
 
 test('tx for route with no tx handler', (t) => {
   // TODO: use module objs instead of arrays
-  // TODO: chain and ctx will be the same thing
   let router = new Router({
     foo: [
       {
@@ -286,7 +281,6 @@ test('tx for route with no tx handler', (t) => {
 
 test('initialState override', (t) => {
   // TODO: use module objs instead of arrays
-  // TODO: chain and ctx will be the same thing
   let router = new Router({
     foo: Object.assign([], {
       initialState: { x: 'y' }
@@ -308,7 +302,6 @@ test('initialState override', (t) => {
 
 test('existing state not overriden', (t) => {
   // TODO: use module objs instead of arrays
-  // TODO: chain and ctx will be the same thing
   let router = new Router({
     foo (state, tx, context) {}
   })
