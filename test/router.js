@@ -305,3 +305,19 @@ test('initialState override', (t) => {
     t.is(err.message, 'Route "foo" has initialState, but state.foo already exists')
   }
 })
+
+test('existing state not overriden', (t) => {
+  // TODO: use module objs instead of arrays
+  // TODO: chain and ctx will be the same thing
+  let router = new Router({
+    foo (state, tx, context) {}
+  })
+
+  let initializer = router
+    .find(({ type }) => type === 'initializer')
+    .middleware
+
+  let state = { foo: { bar: 'baz' } }
+  initializer(state)
+  t.is(state.foo.bar, 'baz')
+})
