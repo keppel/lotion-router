@@ -75,11 +75,16 @@ function Router (routes) {
   // lotion initialization handler
   function initializer (state, chain) {
     for (let route in routes) {
-      let substate = {}
+      let substate
+
       if (routes[route].initialState != null) {
+        if (route in state) {
+          throw Error(`Route "${route}" has initialState, but state.${route} already exists`)
+        }
         substate = routes[route].initialState
       }
-      state[route] = substate
+
+      state[route] = substate || {}
     }
 
     for (let { route, handler } of initializers) {
