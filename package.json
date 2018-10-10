@@ -21,5 +21,17 @@
   },
   "dependencies": {
     "old": "^0.2.0"
-  }
+  },
+  "directories": {
+    "example": "example",
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mappum/lotion-router.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mappum/lotion-router/issues"
+  },
+  "homepage": "https://github.com/mappum/lotion-router#readme"
 }
