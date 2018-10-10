@@ -13,7 +13,7 @@ function Router (routes) {
   let initializers = getAllHandlers(routes, 'initializer')
 
   // lotion tx handler
-  function txHandler (state, tx, chain) {
+  function txHandler (state, tx, context) {
     if (tx.type == null) {
       throw Error('Must provide type')
     }
@@ -50,30 +50,27 @@ function Router (routes) {
       })
     }
 
-    // TODO: combine ctx with chainInfo
-    let ctx = {
-      // root state, just in case
-      rootState: state,
+    // expose root state, just in case
+    context.rootState = state
 
-      // exported methods from other routes
-      routes: exportedMethods
-    }
+    // exported methods from other routes
+    context.modules = exportedMethods
 
     for (let handler of handlers) {
-      handler(substate, tx, chain, ctx)
+      handler(substate, tx, context)
     }
   }
 
   // lotion block handler
-  function blockHandler (state, chain) {
+  function blockHandler (state, context) {
     for (let { route, handler } of blockHandlers) {
       let substate = getSubstate(state, route)
-      handler(substate, chain)
+      handler(substate, context)
     }
   }
 
   // lotion initialization handler
-  function initializer (state, chain) {
+  function initializer (state, context) {
     for (let route in routes) {
       let substate = state[route]
 
@@ -89,7 +86,7 @@ function Router (routes) {
 
     for (let { route, handler } of initializers) {
       let substate = state[route]
-      handler(substate, chain)
+      handler(substate, context)
     }
   }
 
