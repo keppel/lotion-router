@@ -14,7 +14,9 @@ test('create router without routes', (t) => {
 
 test('create router', (t) => {
   let router = new Router({})
-  t.true(Array.isArray(router))
+  t.true('transactionHandlers' in router)
+  t.true('blockHandlers' in router)
+  t.true('initializers' in router)
 })
 
 test('routes txs to correct handlers', (t) => {
@@ -29,9 +31,8 @@ test('routes txs to correct handlers', (t) => {
     }
   })
 
-  let txHandler = router
-    .find(({ type }) => type === 'tx')
-    .middleware
+  let txHandler = (...args) =>
+    router.transactionHandlers.forEach((h) => h(...args))
 
   txHandler(
     { foo: {}, bar: {} },
@@ -62,9 +63,8 @@ test('routes txs to correct handlers', (t) => {
 test('errors on bad tx type', (t) => {
   let router = new Router({})
 
-  let txHandler = router
-    .find(({ type }) => type === 'tx')
-    .middleware
+  let txHandler = (...args) =>
+    router.transactionHandlers.forEach((h) => h(...args))
 
   try {
     txHandler({}, {}, {}, {})
@@ -84,22 +84,20 @@ test('errors on bad tx type', (t) => {
 test('calls initializers', (t) => {
   let router = new Router({
     foo (state, tx, ctx) {},
-    bar: [
-      {
-        type: 'initializer',
-        middleware (state) {
+    bar: {
+      initializers: [
+        function (state) {
           state.x = 123
         }
-      }
-    ],
-    baz: Object.assign([], {
+      ]
+    },
+    baz: {
       initialState: { y: 456 }
-    })
+    }
   })
 
-  let initializer = router
-    .find(({ type }) => type === 'initializer')
-    .middleware
+  let initializer = (...args) =>
+    router.initializers.forEach((h) => h(...args))
 
   let state = {}
   initializer(state)
@@ -112,19 +110,17 @@ test('calls initializers', (t) => {
 
 test('calls block handlers', (t) => {
   let router = new Router({
-    foo: [
-      {
-        type: 'block',
-        middleware (state, chain) {
+    foo: {
+      blockHandlers: [
+        function (state, chain) {
           t.is(state.x, 123)
         }
-      }
-    ]
+      ]
+    }
   })
 
-  let blockHandler = router
-    .find(({ type }) => type === 'block')
-    .middleware
+  let blockHandler = (...args) =>
+    router.blockHandlers.forEach((h) => h(...args))
 
   blockHandler({ foo: { x: 123 } }, {})
 })
@@ -134,9 +130,8 @@ test('errors on missing substate', (t) => {
     foo () {}
   })
 
-  let txHandler = router
-    .find(({ type }) => type === 'tx')
-    .middleware
+  let txHandler = (...args) =>
+    router.transactionHandlers.forEach((h) => h(...args))
 
   try {
     txHandler({}, { type: 'foo' }, {}, {})
@@ -147,24 +142,22 @@ test('errors on missing substate', (t) => {
 })
 
 test('cross-route methods', (t) => {
-  // TODO: use module objs instead of arrays
   let router = new Router({
     foo (state, tx, ctx) {
       state.value = ctx.modules.bar.increment()
     },
-    bar: Object.assign([], {
+    bar: {
       methods: {
         increment (state) {
           state.value += 1
           return state.value
         }
       }
-    })
+    }
   })
 
-  let txHandler = router
-    .find(({ type }) => type === 'tx')
-    .middleware
+  let txHandler = (...args) =>
+    router.transactionHandlers.forEach((h) => h(...args))
 
   let state = { foo: {}, bar: { value: 5 } }
   txHandler(state, { type: 'foo' }, {})
@@ -174,21 +167,19 @@ test('cross-route methods', (t) => {
 })
 
 test('cross-route methods must be functions', (t) => {
-  // TODO: use module objs instead of arrays
   let router = new Router({
     foo (state, tx, ctx) {
       state.value = ctx.modules.bar.x
     },
-    bar: Object.assign([], {
+    bar: {
       methods: {
         x: 5
       }
-    })
+    }
   })
 
-  let txHandler = router
-    .find(({ type }) => type === 'tx')
-    .middleware
+  let txHandler = (...args) =>
+    router.transactionHandlers.forEach((h) => h(...args))
 
   let state = { foo: {}, bar: {} }
   try {
@@ -200,21 +191,19 @@ test('cross-route methods must be functions', (t) => {
 })
 
 test('cross-route methods are read-only', (t) => {
-  // TODO: use module objs instead of arrays
   let router = new Router({
     foo (state, tx, ctx) {
       state.value = ctx.modules.bar.y = 5
     },
-    bar: Object.assign([], {
+    bar: {
       methods: {
         x () {}
       }
-    })
+    }
   })
 
-  let txHandler = router
-    .find(({ type }) => type === 'tx')
-    .middleware
+  let txHandler = (...args) =>
+    router.transactionHandlers.forEach((h) => h(...args))
 
   let state = { foo: {}, bar: {} }
   try {
@@ -226,27 +215,21 @@ test('cross-route methods are read-only', (t) => {
 })
 
 test('module with multiple middleware of type', (t) => {
-  // TODO: use module objs instead of arrays
   let router = new Router({
-    foo: [
-      {
-        type: 'tx',
-        middleware (state, tx) {
+    foo: {
+      transactionHandlers: [
+        function (state, tx) {
           state.x = tx.count
-        }
-      },
-      {
-        type: 'tx',
-        middleware (state, tx) {
+        },
+        function (state, tx) {
           state.y = tx.count
         }
-      }
-    ]
+      ]
+    }
   })
 
-  let txHandler = router
-    .find(({ type }) => type === 'tx')
-    .middleware
+  let txHandler = (...args) =>
+    router.transactionHandlers.forEach((h) => h(...args))
 
   let state = { foo: {} }
   txHandler(state, { type: 'foo', count: 1 }, {})
@@ -256,7 +239,6 @@ test('module with multiple middleware of type', (t) => {
 })
 
 test('tx for route with no tx handler', (t) => {
-  // TODO: use module objs instead of arrays
   let router = new Router({
     foo: [
       {
@@ -266,9 +248,8 @@ test('tx for route with no tx handler', (t) => {
     ]
   })
 
-  let txHandler = router
-    .find(({ type }) => type === 'tx')
-    .middleware
+  let txHandler = (...args) =>
+    router.transactionHandlers.forEach((h) => h(...args))
 
   let state = { foo: {} }
   try {
@@ -280,16 +261,14 @@ test('tx for route with no tx handler', (t) => {
 })
 
 test('initialState override', (t) => {
-  // TODO: use module objs instead of arrays
   let router = new Router({
-    foo: Object.assign([], {
+    foo: {
       initialState: { x: 'y' }
-    })
+    }
   })
 
-  let initializer = router
-    .find(({ type }) => type === 'initializer')
-    .middleware
+  let initializer = (...args) =>
+    router.initializers.forEach((h) => h(...args))
 
   let state = { foo: {} }
   try {
@@ -305,9 +284,8 @@ test('existing state not overriden', (t) => {
     foo (state, tx, context) {}
   })
 
-  let initializer = router
-    .find(({ type }) => type === 'initializer')
-    .middleware
+  let initializer = (...args) =>
+    router.initializers.forEach((h) => h(...args))
 
   let state = { foo: { bar: 'baz' } }
   initializer(state)
@@ -315,16 +293,14 @@ test('existing state not overriden', (t) => {
 })
 
 test('context has rootState', (t) => {
-  // TODO: use module objs instead of arrays
   let router = new Router({
     foo (state, tx, ctx) {
       t.is(ctx.rootState.x, 123)
     }
   })
 
-  let txHandler = router
-    .find(({ type }) => type === 'tx')
-    .middleware
+  let txHandler = (...args) =>
+    router.transactionHandlers.forEach((h) => h(...args))
 
   let state = { x: 123, foo: {} }
   txHandler(state, { type: 'foo' }, {})
