@@ -2,15 +2,13 @@
 
 const old = require('old')
 
-// TODO: change standard lotion module format to object (not array)
-
 function Router (routes) {
   if (routes == null || typeof routes !== 'object') {
     throw Error('Must provide routes object')
   }
 
-  let blockHandlers = getAllHandlers(routes, 'block')
-  let initializers = getAllHandlers(routes, 'initializer')
+  let blockHandlers = getAllHandlers(routes, 'blockHandlers')
+  let initializers = getAllHandlers(routes, 'initializers')
 
   // lotion tx handler
   function txHandler (state, tx, context) {
@@ -21,7 +19,20 @@ function Router (routes) {
       throw Error('Type must be a string')
     }
 
-    let handlers = getRouteHandlers(routes, tx.type, 'tx')
+    // TODO: recursive route handling (paths)
+
+    let route = routes[tx.type]
+    if (route == null) {
+      throw Error(`No route found for "${tx.type}"`)
+    }
+    // special case: single function is tx handler
+    if (typeof route === 'function') {
+      route = { transactionHandlers: [ route ] }
+    }
+    if (!route.transactionHandlers) {
+      throw Error(`No tx handlers defined for route "${tx.type}"`)
+    }
+
     let substate = getSubstate(state, tx.type)
 
     // get exported methods from other routes
@@ -56,16 +67,16 @@ function Router (routes) {
     // exported methods from other routes
     context.modules = exportedMethods
 
-    for (let handler of handlers) {
+    for (let handler of route.transactionHandlers) {
       handler(substate, tx, context)
     }
   }
 
   // lotion block handler
   function blockHandler (state, context) {
-    for (let { route, handler } of blockHandlers) {
+    for (let { route, handlers } of blockHandlers) {
       let substate = getSubstate(state, route)
-      handler(substate, context)
+      handlers.forEach((handler) => handler(substate, context))
     }
   }
 
@@ -84,71 +95,43 @@ function Router (routes) {
       state[route] = substate || {}
     }
 
-    for (let { route, handler } of initializers) {
+    for (let { route, handlers } of initializers) {
       let substate = state[route]
-      handler(substate, context)
+      handlers.forEach((handler) => handler(substate, context))
     }
   }
 
-  // returns a lotion middleware stack
-  return [
-    { type: 'tx', middleware: txHandler },
-    { type: 'block', middleware: blockHandler },
-    { type: 'initializer', middleware: initializer }
-  ]
+  // returns a lotion module
+  return {
+    transactionHandlers: [ txHandler ],
+    blockHandlers: [ blockHandler ],
+    initializers: [ initializer ]
+    // TODO: export methods
+  }
 }
 
 function getAllHandlers (routes, type) {
-  let handlers = []
-  for (let routeName in routes) {
-    let route = routes[routeName]
+  let output = []
 
+  let addHandlers = (routeName, module) => {
     // special case: single function is tx handler
-    if (typeof route === 'function') {
-      route = [ { type: 'tx', middleware: route } ]
+    if (typeof module === 'function') {
+      module = { transactionHandlers: [ module ] }
     }
 
-    for (let handler of route) {
-      if (handler.type !== type) continue
-      handlers.push({
-        route: routeName,
-        handler: handler.middleware
-      })
-    }
-  }
-  return handlers
-}
-
-function getRoute (routes, routeName) {
-  let route = routes[routeName]
-  if (route == null) {
-    throw Error(`No route found for "${routeName}"`)
-  }
-  return route
-}
-
-function getRouteHandlers (routes, routeName, type = 'tx') {
-  function throwNoHandlerError () {
-    throw Error(`No ${type} handlers defined for route "${routeName}"`)
+    if (module[type] == null) return
+    output.push({
+      route: routeName,
+      handlers: module[type]
+    })
   }
 
-  // find route
-  let route = getRoute(routes, routeName)
-
-  // special case: if route is a function, it's a tx handler
-  if (typeof route === 'function') {
-    if (type === 'tx') return [ route ]
-    throwNoHandlerError()
+  for (let routeName in routes) {
+    let module = routes[routeName]
+    addHandlers(routeName, module)
   }
 
-  // find handler of given type from route
-  let handlers = route
-    .filter((h) => h.type === type)
-    .map((h) => h.middleware)
-  if (handlers.length === 0) {
-    throwNoHandlerError()
-  }
-  return handlers
+  return output
 }
 
 function getSubstate (state, key) {
