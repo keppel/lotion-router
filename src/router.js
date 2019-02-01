@@ -35,10 +35,51 @@ function Router (routes) {
 
     let substate = getSubstate(state, tx.type)
 
+    setContextProperties(state, context, tx.type)
+
+    for (let handler of route.transactionHandlers) {
+      handler(substate, tx, context)
+    }
+  }
+
+  // lotion block handler
+  function blockHandler (state, context) {
+    setContextProperties(state, context)
+    for (let { route, handlers } of blockHandlers) {
+      let substate = getSubstate(state, route)
+      handlers.forEach((handler) => handler(substate, context))
+    }
+  }
+
+  // lotion initialization handler
+  function initializer (state, context) {
+    for (let route in routes) {
+      let substate = state[route]
+
+      if (routes[route].initialState != null) {
+        if (route in state) {
+          throw Error(`Route "${route}" has initialState, but state.${route} already exists`)
+        }
+        substate = routes[route].initialState
+      }
+
+      state[route] = substate || {}
+    }
+
+    setContextProperties(state, context)
+
+    for (let { route, handlers } of initializers) {
+      let substate = state[route]
+      handlers.forEach((handler) => handler(substate, context))
+    }
+  }
+
+  function setContextProperties (state, context, currentRoute) {
     // get exported methods from other routes
+    // TODO: do this once and just update the closure variables (state/context)
     let exportedMethods = {}
     for (let [ routeName, route ] of Object.entries(routes)) {
-      if (routeName === tx.type) continue
+      if (currentRoute != null && routeName === currentRoute) continue
       if (route.methods == null) continue
       // define getter, so we bind the methods as they are accessed
       Object.defineProperty(exportedMethods, routeName, {
@@ -66,39 +107,6 @@ function Router (routes) {
 
     // exported methods from other routes
     context.modules = exportedMethods
-
-    for (let handler of route.transactionHandlers) {
-      handler(substate, tx, context)
-    }
-  }
-
-  // lotion block handler
-  function blockHandler (state, context) {
-    for (let { route, handlers } of blockHandlers) {
-      let substate = getSubstate(state, route)
-      handlers.forEach((handler) => handler(substate, context))
-    }
-  }
-
-  // lotion initialization handler
-  function initializer (state, context) {
-    for (let route in routes) {
-      let substate = state[route]
-
-      if (routes[route].initialState != null) {
-        if (route in state) {
-          throw Error(`Route "${route}" has initialState, but state.${route} already exists`)
-        }
-        substate = routes[route].initialState
-      }
-
-      state[route] = substate || {}
-    }
-
-    for (let { route, handlers } of initializers) {
-      let substate = state[route]
-      handlers.forEach((handler) => handler(substate, context))
-    }
   }
 
   // returns a lotion module
