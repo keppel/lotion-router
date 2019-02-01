@@ -86,8 +86,9 @@ test('calls initializers', (t) => {
     foo (state, tx, ctx) {},
     bar: {
       initializers: [
-        function (state) {
+        function (state, context) {
           state.x = 123
+          context.y = 456
         }
       ]
     },
@@ -99,8 +100,14 @@ test('calls initializers', (t) => {
   let initializer = (...args) =>
     router.initializers.forEach((h) => h(...args))
 
+  let context = {}
   let state = {}
-  initializer(state)
+  initializer(state, context)
+  t.deepEqual(context, {
+    modules: {},
+    rootState: state,
+    y: 456
+  })
   t.deepEqual(state, {
     foo: {},
     bar: { x: 123 },
@@ -288,7 +295,7 @@ test('existing state not overriden', (t) => {
     router.initializers.forEach((h) => h(...args))
 
   let state = { foo: { bar: 'baz' } }
-  initializer(state)
+  initializer(state, {})
   t.is(state.foo.bar, 'baz')
 })
 
